@@ -53,7 +53,7 @@ def fix_base_url(base_url):
         base_url = base_url.strip('/') + '/v1'
     return base_url
 
-def ask_gpt(prompt, response_json=True, valid_def=None, log_title='default'):
+def ask_gpt(prompt, response_json=True, valid_def=None, log_title='default', system=None):
     api_set = load_key("api")
     llm_support_json = load_key("llm_support_json")
     with LOCK:
@@ -64,7 +64,13 @@ def ask_gpt(prompt, response_json=True, valid_def=None, log_title='default'):
     if not api_set["key"]:
         raise ValueError(f"⚠️API_KEY is missing")
     
-    messages = [{"role": "user", "content": prompt}]
+    if system is None:
+        messages = [{"role": "user", "content": prompt}]
+    else:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt}
+            ]
     
     base_url = fix_base_url(api_set["base_url"])
     client = OpenAI(api_key=api_set["key"], base_url=base_url)

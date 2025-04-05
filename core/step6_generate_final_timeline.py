@@ -11,6 +11,7 @@ console = Console()
 CLEANED_CHUNKS_FILE = 'output/log/cleaned_chunks.xlsx'
 TRANSLATION_RESULTS_FOR_SUBTITLES_FILE = 'output/log/translation_results_for_subtitles.xlsx'
 TRANSLATION_RESULTS_REMERGED_FILE = 'output/log/translation_results_remerged.xlsx'
+TRANSLATION_RESULTS_FILE = "output/log/translation_results.xlsx"
 
 OUTPUT_DIR = 'output'
 AUDIO_OUTPUT_DIR = 'output/audio'
@@ -111,24 +112,25 @@ def align_timestamp(df_text, df_translate, subtitle_output_configs: list, output
     """Align timestamps and add a new timestamp column to df_translate"""
     df_trans_time = df_translate.copy()
 
-    # Assign an ID to each word in df_text['text'] and create a new DataFrame
-    words = df_text['text'].str.split(expand=True).stack().reset_index(level=1, drop=True).reset_index()
-    words.columns = ['id', 'word']
-    words['id'] = words['id'].astype(int)
+    if df_text is not None:
+        # Assign an ID to each word in df_text['text'] and create a new DataFrame
+        words = df_text['text'].str.split(expand=True).stack().reset_index(level=1, drop=True).reset_index()
+        words.columns = ['id', 'word']
+        words['id'] = words['id'].astype(int)
 
-    # Process timestamps ⏰
-    time_stamp_list = get_sentence_timestamps(df_text, df_translate)
-    df_trans_time['timestamp'] = time_stamp_list
-    df_trans_time['duration'] = df_trans_time['timestamp'].apply(lambda x: x[1] - x[0])
+        # Process timestamps ⏰
+        time_stamp_list = get_sentence_timestamps(df_text, df_translate)
+        df_trans_time['timestamp'] = time_stamp_list
+        df_trans_time['duration'] = df_trans_time['timestamp'].apply(lambda x: x[1] - x[0])
 
     # Remove gaps 🕳️
-    for i in range(len(df_trans_time)-1):
-        delta_time = df_trans_time.loc[i+1, 'timestamp'][0] - df_trans_time.loc[i, 'timestamp'][1]
-        if 0 < delta_time < 1:
-            df_trans_time.at[i, 'timestamp'] = (df_trans_time.loc[i, 'timestamp'][0], df_trans_time.loc[i+1, 'timestamp'][0])
+    # for i in range(len(df_trans_time)-1):
+    #     delta_time = df_trans_time.loc[i+1, 'timestamp'][0] - df_trans_time.loc[i, 'timestamp'][1]
+    #     if 0 < delta_time < 1:
+    #         df_trans_time.at[i, 'timestamp'] = (df_trans_time.loc[i, 'timestamp'][0], df_trans_time.loc[i+1, 'timestamp'][0])
 
     # Convert start and end timestamps to SRT format
-    df_trans_time['timestamp'] = df_trans_time['timestamp'].apply(lambda x: convert_to_srt_format(x[0], x[1]))
+    # df_trans_time['timestamp'] = df_trans_time['timestamp'].apply(lambda x: convert_to_srt_format(x[0], x[1]))
 
     # Polish subtitles: replace punctuation in Translation if for_display
     if for_display:
@@ -169,7 +171,21 @@ def align_timestamp_main():
     
     align_timestamp(df_text, df_translate_for_audio, AUDIO_SUBTITLE_OUTPUT_CONFIGS, AUDIO_OUTPUT_DIR)
     console.print(Panel("[bold green]🎉📝 Audio subtitles generation completed! Please check in the `output/audio` folder 👀[/bold green]"))
+
+def generate_subtitle():
+    df_translate = pd.read_excel(TRANSLATION_RESULTS_FILE)
+    # df_translate['Translation'] = df_translate['Translation'].apply(clean_translation)
+    
+    align_timestamp(None, df_translate, SUBTITLE_OUTPUT_CONFIGS, OUTPUT_DIR)
+    console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
+
+    # for audio
+    df_translate_for_audio = pd.read_excel(TRANSLATION_RESULTS_FILE) # use remerged file to avoid unmatched lines when dubbing
+    # df_translate_for_audio['Translation'] = df_translate_for_audio['Translation'].apply(clean_translation)
+    
+    align_timestamp(None, df_translate_for_audio, AUDIO_SUBTITLE_OUTPUT_CONFIGS, AUDIO_OUTPUT_DIR)
+    console.print(Panel("[bold green]🎉📝 Audio subtitles generation completed! Please check in the `output/audio` folder 👀[/bold green]"))
     
 
 if __name__ == '__main__':
-    align_timestamp_main()
+    generate_subtitle()

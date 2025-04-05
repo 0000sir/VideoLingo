@@ -57,7 +57,7 @@ def page_setting():
                 st.rerun()
 
         # add runtime selection in v2.2.0
-        runtime = st.selectbox(t("WhisperX Runtime"), options=["local", "cloud"], index=["local", "cloud"].index(load_key("whisper.runtime")), help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key"))
+        runtime = st.selectbox(t("WhisperX Runtime"), options=["local", "cloud", "paraformer"], index=["local", "cloud", "paraformer"].index(load_key("whisper.runtime")), help=t("Local runtime requires >8GB GPU, cloud runtime requires 302ai API key"))
         if runtime != load_key("whisper.runtime"):
             update_key("whisper.runtime", runtime)
             st.rerun()

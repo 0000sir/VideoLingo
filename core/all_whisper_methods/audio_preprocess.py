@@ -4,6 +4,9 @@ from typing import Dict, List, Tuple
 from rich import print
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.config_utils import update_key
+from core.ask_gpt import ask_gpt
+import json
+from rich import print as rprint
 
 AUDIO_DIR = "output/audio"
 RAW_AUDIO_FILE = "output/audio/raw.mp3"
@@ -161,3 +164,150 @@ def save_results(df: pd.DataFrame):
 
 def save_language(language: str):
     update_key("whisper.detected_language", language)
+
+# 根据对话内容总结要点
+def summarize(content: str):
+    system = """
+    Please extract the background information, main content points, names, and explanations of key terms from the user-provided dialogue or narrative.
+    """
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": content}
+    ]
+    return ask_gpt(content, response_json=False, valid_def=None, log_title='summarize', system=system)
+
+# 使用大模型总结全篇内容要点，并以此为背景校对语句（同时更新文字）
+# segments结构
+# "segments": [
+#         {
+#             "start": 0.069,
+#             "end": 25.687,
+#             "text": "这一万",
+#             "words": [
+#                 {
+#                     "word": "这",
+#                     "start": 0.069,
+#                     "end": 0.209,
+#                     "score": 0.836
+#                 },
+#                 {
+#                     "word": "一",
+#                     "start": 0.209,
+#                     "end": 0.329,
+#                     "score": 0.965
+#                 },
+#                 {
+#                     "word": "万",
+#                     "start": 0.329,
+#                     "end": 0.87,
+#                     "score": 0.958
+#                 },
+#         }
+# ]
+def proofread_with_semantic(segments: list):
+    texts = []
+    for seg in segments:
+        texts.append(seg['text'])
+    summary = summarize("\n".join(texts))
+
+    system = f"""用户将发给你一段视频配音文字的片段，格式为：
+    [
+        "第一句内容",
+        "第二句内容"
+    ]
+    请根据背景知识，改正其中可能存在的错误文字，请直接输出修改后的内容，以同样的json格式返回，
+    如果用户发来的信息中没有错误，请直接输出原文，不要添加其它任何说明，以下是背景知识：
+<background>
+{summary}
+</background>
+"""
+    results = []
+    # 每次提取20句
+    batch_size = 20
+    for i in range(0, len(segments), batch_size):
+        batch = segments[i:i+batch_size]
+        texts = [item['text'] for item in batch]
+        res = ask_gpt(json.dumps(texts, indent=4, ensure_ascii=False), response_json=True, valid_def=None, log_title='proofread', system=system)
+        for j in range(min(len(batch), len(res))):
+            rprint(f"[cyan]{batch[j]['text']}[/cyan]\n[green]{res[j]}[/green]")
+            batch[j]['text'] = res[j]
+        results.extend(batch)
+
+    return results
+
+# 将过长字幕按句拆分
+def split_long_lines(segments: list):
+    new_lines = []
+    for sentence in segments:
+        splited = split_subtitle_by_punctuation(sentence)
+        new_lines.extend(splited)
+    return new_lines
+
+def split_subtitle_by_punctuation(subtitle_dict):
+    """
+    严格按 words 中的标点符号分割字幕，不强制限制每行字数
+    
+    参数:
+        subtitle_dict: 原始字幕 dict，必须包含 "words" 列表，当word是标点时，没有start和end时间
+        
+    返回:
+        拆分后的字幕 dict 列表
+    """
+    if "words" not in subtitle_dict:
+        return [subtitle_dict]  # 如果没有 words 数据，直接返回原字幕
+    
+    words = subtitle_dict["words"]
+    
+    sentences = []
+    current_sentence = ""
+    current_words = []
+    
+    for word in words:
+        current_sentence += word["word"]
+        current_words.append(word)
+        
+        # 如果当前 word 有标点符号（逗号、句号等），则分割
+        if word["word"] and word["word"] in {"，", "。", "；", "！", "？", "、", ",", ".", ";", "!", "?"} and len(current_sentence)>5:
+            sentences.append((current_sentence, current_words.copy()))
+            current_sentence = ""
+            current_words = []
+    
+    # 添加最后一个句子（如果有剩余）
+    if current_sentence:
+        sentences.append((current_sentence, current_words.copy()))
+    
+    # 构建新的字幕 dict 列表
+    result = []
+    for sentence_text, sentence_words in sentences:
+        if not sentence_words:
+            continue
+        begin_time = sentence_words[0]["start"]
+        # find last word with 'end' field
+        for item in reversed(sentence_words):
+            if 'end' in item:
+                end_time = item["end"]
+                break
+        
+        new_dict = {
+            "start": begin_time,
+            "end": end_time,
+            "text": sentence_text,
+            "words": sentence_words
+        }
+        result.append(new_dict)
+    
+    # print("------------------------")
+    # print(subtitle_dict['text'])
+    # for r in result:
+    #     print(f"{r['text']}\n")
+    
+    return result
+    
+if __name__ == "__main__":
+    # load segments from json file
+    data = json.loads(open("/app/output/audio/asr_result.json", 'r').read())
+    # segments = proofread_with_semantic(data['segments'])
+    # print(json.dumps(segments, indent=4, ensure_ascii=False))
+    splited = split_long_lines(data['segments'])
+    # segments = proofread_with_semantic(splited)
+    #print(json.dumps(segments, indent=4, ensure_ascii=False))

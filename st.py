@@ -45,17 +45,19 @@ def text_processing_section():
 def process_text():
     with st.spinner(t("Using Whisper for transcription...")):
         step2_whisperX.transcribe()
-    with st.spinner(t("Splitting long sentences...")):  
-        step3_1_spacy_split.split_by_spacy()
-        step3_2_splitbymeaning.split_sentences_by_meaning()
+    # with st.spinner(t("Splitting long sentences...")):  
+    #     step3_1_spacy_split.split_by_spacy()
+    #     step3_2_splitbymeaning.split_sentences_by_meaning()
     with st.spinner(t("Summarizing and translating...")):
         step4_1_summarize.get_summary()
         if load_key("pause_before_translate"):
             input(t("⚠️ PAUSE_BEFORE_TRANSLATE. Go to `output/log/terminology.json` to edit terminology. Then press ENTER to continue..."))
-        step4_2_translate_all.translate_all()
+        # step4_2_translate_all.translate_all()
+        step4_0_translate_directly.translate_all()
     with st.spinner(t("Processing and aligning subtitles...")): 
-        step5_splitforsub.split_for_sub_main()
-        step6_generate_final_timeline.align_timestamp_main()
+        # 切完乱七入糟
+        # step5_splitforsub.split_for_sub_main()
+        step6_generate_final_timeline.generate_subtitle()
     with st.spinner(t("Merging subtitles to video...")):
         step7_merge_sub_to_vid.merge_subtitles_to_video()
     
@@ -110,7 +112,7 @@ def main():
     with logo_col:
         st.image("docs/logo.png", use_column_width=True)
     st.markdown(button_style, unsafe_allow_html=True)
-    welcome_text = t("Hello, welcome to VideoLingo. If you encounter any issues, feel free to get instant answers with our Free QA Agent <a href=\"https://share.fastgpt.in/chat/share?shareId=066w11n3r9aq6879r4z0v9rh\" target=\"_blank\">here</a>! You can also try out our SaaS website at <a href=\"https://videolingo.io\" target=\"_blank\">videolingo.io</a> for free!")
+    welcome_text = t("Video Auto Dub Tool")
     st.markdown(f"<p style='font-size: 20px; color: #808080;'>{welcome_text}</p>", unsafe_allow_html=True)
     # add settings
     with st.sidebar:
