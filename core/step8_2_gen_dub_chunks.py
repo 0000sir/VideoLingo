@@ -79,17 +79,17 @@ def analyze_subtitle_timing_and_speed(df):
                        last_end.second + last_end.microsecond / 1000000)
     df.iloc[-1, df.columns.get_loc('gap')] = whole_dur - last_end_seconds
     
-    df['tolerance'] = df['gap'].apply(lambda x: TOLERANCE if x > TOLERANCE else x)
+    df['tolerance'] = df['gap'].apply(lambda x: TOLERANCE if x < TOLERANCE else x)
     df['tol_dur'] = df['duration'] + df['tolerance']
     df['est_dur'] = df.apply(lambda x: estimate_duration(x['text'], ESTIMATOR), axis=1)
 
     ## Calculate speed indicators
     accept = load_key("speed_factor.accept") # Maximum acceptable speed factor
     def calc_if_too_fast(row):
-        est_dur = row['est_dur']
-        tol_dur = row['tol_dur']
-        duration = row['duration']
-        tolerance = row['tolerance']
+        est_dur = row['est_dur'] # 目标估算时长
+        tol_dur = row['tol_dur'] # 最大时长：原文时长+空白时间或允许的误差
+        duration = row['duration'] # 原文时长
+        tolerance = row['tolerance'] # 在下一句台词前的允许使用的额外时间
         
         if est_dur / accept > tol_dur:  # Even max speed factor cannot adapt
             return 2

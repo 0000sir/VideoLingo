@@ -82,8 +82,8 @@ def audio_processing_section():
                 st.rerun()
         else:
             st.success(t("Audio processing is complete! You can check the audio files in the `output` folder."))
-            if load_key("burn_subtitles"):
-                st.video(DUB_VIDEO) 
+            # if load_key("burn_subtitles"):
+            st.video(DUB_VIDEO) 
             if st.button(t("Delete dubbing files"), key="delete_dubbing_files"):
                 delete_dubbing_files()
                 st.rerun()

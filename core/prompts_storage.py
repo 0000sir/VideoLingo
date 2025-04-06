@@ -149,6 +149,7 @@ We have a segment of original {src_language} subtitles that need to be directly 
 1. Translate the original {src_language} subtitles into {TARGET_LANGUAGE} line by line
 2. Ensure the translation is faithful to the original, accurately conveying the original meaning
 3. Consider the context and professional terminology
+4. Strive to match syllable counts with the original, ensuring dubbed audio timing aligns closely.
 
 {shared_prompt}
 
@@ -193,6 +194,7 @@ We already have a direct translation version of the original {src_language} subt
 2. Provide detailed modification suggestions
 3. Perform free translation based on your analysis
 4. Do not add comments or explanations in the translation, as the subtitles are for the audience to read
+5. Strive to match syllable counts with the original, ensuring dubbed audio timing aligns closely.
 
 {shared_prompt}
 

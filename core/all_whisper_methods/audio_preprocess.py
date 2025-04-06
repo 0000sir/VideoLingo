@@ -7,10 +7,12 @@ from core.config_utils import update_key
 from core.ask_gpt import ask_gpt
 import json
 from rich import print as rprint
+from step4_1_summarize import get_summary
 
 AUDIO_DIR = "output/audio"
 RAW_AUDIO_FILE = "output/audio/raw.mp3"
 CLEANED_CHUNKS_EXCEL_PATH = "output/log/cleaned_chunks.xlsx"
+TERMINOLOGY_JSON_PATH = 'output/log/terminology.json'
 
 def compress_audio(input_file: str, output_file: str):
     """将输入音频文件压缩为低质量音频文件，用于转录"""
@@ -208,7 +210,8 @@ def proofread_with_semantic(segments: list):
     texts = []
     for seg in segments:
         texts.append(seg['text'])
-    summary = summarize("\n".join(texts))
+    get_summary() # generate summary
+    summary = json.loads(open(TERMINOLOGY_JSON_PATH, 'r', encoding='utf-8').read())
 
     system = f"""用户将发给你一段视频配音文字的片段，格式为：
     [
@@ -281,7 +284,11 @@ def split_subtitle_by_punctuation(subtitle_dict):
     for sentence_text, sentence_words in sentences:
         if not sentence_words:
             continue
-        begin_time = sentence_words[0]["start"]
+        # find the first word with 'start' field
+        for item in sentence_words:
+            if 'start' in item:
+                begin_time = item["start"]
+                break
         # find last word with 'end' field
         for item in reversed(sentence_words):
             if 'end' in item:

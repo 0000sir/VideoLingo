@@ -45,10 +45,12 @@ def cosyvoice_tts_for_videolingo(text, save_as, number, task_df):
     save_path = Path(save_as)
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
+    lang = load_key('target_language')
+
     with client.audio.speech.with_streaming_response.create(
         model="FunAudioLLM/CosyVoice2-0.5B",
         voice="",
-        input=text,
+        input=f"Speak in {lang}:<|endofprompt|>{text}",
         response_format="wav",
         extra_body={
             "references": [

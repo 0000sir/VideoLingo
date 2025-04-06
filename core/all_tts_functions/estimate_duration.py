@@ -114,7 +114,7 @@ def estimate_duration(text: str, estimator: AdvancedSyllableEstimator):
 # 使用示例
 if __name__ == "__main__":
     estimator = init_estimator()
-    print(estimate_duration('你好', estimator))
+    # print(estimate_duration('你好', estimator))
 
     # 测试用例
     test_cases = [
@@ -124,7 +124,9 @@ if __name__ == "__main__":
         # "The weather is nice 所以我们去公园",  # 中英混合带空格
         # "我们需要在输出中体现空格的停顿时间",
         # "I couldn't help but notice the vibrant colors of the autumn leaves cascading gently from the trees"
-        "가을 나뭇잎이 부드럽게 떨어지는 생생한 색깔을 주목하지 않을 수 없었다"
+        # "가을 나뭇잎이 부드럽게 떨어지는 생생한 색깔을 주목하지 않을 수 없었다"
+        "徽班兴起于安徽的安庆一带，",
+        "The Hui Opera troupes originated in the Anqing region of Anhui,"
     ]
     
     for text in test_cases:

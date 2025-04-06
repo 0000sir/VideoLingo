@@ -8,14 +8,15 @@ import pandas as pd
 TERMINOLOGY_JSON_PATH = 'output/log/terminology.json'
 SENTENCE_TXT_PATH = 'output/log/sentence_splitbymeaning.txt'
 CUSTOM_TERMS_PATH = 'custom_terms.xlsx'
+PROOFREADED_ASR = "output/audio/asr_proofreaded.json"
 
 def combine_chunks():
     """Combine the text chunks identified by whisper into a single long text"""
-    with open(SENTENCE_TXT_PATH, 'r', encoding='utf-8') as file:
-        sentences = file.readlines()
-    cleaned_sentences = [line.strip() for line in sentences]
-    combined_text = ' '.join(cleaned_sentences)
-    return combined_text[:load_key('summary_length')]  #! Return only the first x characters
+    sentences = json.loads(open(PROOFREADED_ASR,'r',encoding='utf-8').read())
+    cleaned_sentences = [line['text'].strip() for line in sentences['segments']]
+    combined_text = '\n'.join(cleaned_sentences)
+    #return combined_text[:load_key('summary_length')]  #! Return only the first x characters
+    return combined_text
 
 def search_things_to_note_in_prompt(sentence):
     """Search for terms to note in the given sentence"""
@@ -65,6 +66,7 @@ def get_summary():
     if 'terms' in summary:
         summary['terms'].extend(custom_terms_json['terms'])
     
+    os.makedirs("output/log", exist_ok=True)
     with open(TERMINOLOGY_JSON_PATH, 'w', encoding='utf-8') as f:
         json.dump(summary, f, ensure_ascii=False, indent=4)
 

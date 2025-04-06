@@ -6,6 +6,8 @@ from pydub import AudioSegment
 from rich import print as rprint
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.console import Console
+from core.all_whisper_methods.audio_preprocess import get_audio_duration
+
 console = Console()
 
 INPUT_EXCEL = 'output/audio/tts_tasks.xlsx'
@@ -69,14 +71,14 @@ def merge_audio_segments(audios, new_sub_times, sample_rate):
                 console.print(f"[bold yellow]⚠️  Warning: File {audio_file} does not exist, skipping...[/bold yellow]")
                 progress.advance(merge_task)
                 continue
-                
+               
             audio_segment = process_audio_segment(audio_file)
             start_time, end_time = time_range
             
             # Add silence segment
             if i > 0:
                 prev_end = new_sub_times[i-1][1]
-                silence_duration = start_time - prev_end
+                silence_duration = start_time - merged_audio.duration_seconds
                 if silence_duration > 0:
                     silence = AudioSegment.silent(duration=int(silence_duration * 1000), frame_rate=sample_rate)
                     merged_audio += silence
@@ -126,6 +128,9 @@ def merge_full_audio():
     console.print(f"[bold green]✅ Sample rate: {sample_rate}Hz[/bold green]")
 
     console.print("[bold cyan]🔄 Starting audio merge process...[/bold cyan]")
+    # test
+    # audios = audios[:30]
+    # new_sub_times = new_sub_times[:30]
     merged_audio = merge_audio_segments(audios, new_sub_times, sample_rate)
     
     with console.status("[bold cyan]💾 Exporting final audio file...[/bold cyan]"):

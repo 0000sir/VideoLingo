@@ -81,7 +81,7 @@ def process_row(row: pd.Series, tasks_df: pd.DataFrame) -> Tuple[int, float]:
 
 def generate_tts_audio(tasks_df: pd.DataFrame) -> pd.DataFrame:
     """Generate TTS audio sequentially and calculate actual duration"""
-    tasks_df['real_dur'] = 0
+    tasks_df['real_dur'] = 0.0
     rprint("[bold green]🎯 Starting TTS audio generation...[/bold green]")
     
     with Progress() as progress:
@@ -154,35 +154,36 @@ def merge_chunks(tasks_df: pd.DataFrame) -> pd.DataFrame:
     tasks_df['new_sub_times'] = None
     
     for index, row in tasks_df.iterrows():
-        if row['cut_off'] == 1:
-            chunk_df = tasks_df.iloc[chunk_start:index+1].reset_index(drop=True)
-            speed_factor, keep_gaps = process_chunk(chunk_df, accept, min_speed)
-            
-            # 🎯 Step1: Start processing new timeline
-            chunk_start_time = parse_df_srt_time(chunk_df.iloc[0]['start_time'])
-            chunk_end_time = parse_df_srt_time(chunk_df.iloc[-1]['end_time']) + chunk_df.iloc[-1]['tolerance'] # 加上tolerance才是这一块的结束
-            cur_time = chunk_start_time
-            for i, row in chunk_df.iterrows():
-                # If i is not 0, which is not the first row of the chunk, cur_time needs to be added with the gap of the previous row, remember to divide by speed_factor
-                if i != 0 and keep_gaps:
-                    cur_time += chunk_df.iloc[i-1]['gap']/speed_factor
-                new_sub_times = []
-                number = row['number']
-                lines = eval(row['lines']) if isinstance(row['lines'], str) else row['lines']
-                for line_index, line in enumerate(lines):
-                    # 🔄 Step2: Start speed change and save as OUTPUT_FILE_TEMPLATE
-                    temp_file = TEMP_FILE_TEMPLATE.format(f"{number}_{line_index}")
-                    output_file = OUTPUT_FILE_TEMPLATE.format(f"{number}_{line_index}")
-                    adjust_audio_speed(temp_file, output_file, speed_factor)
-                    ad_dur = get_audio_duration(output_file)
-                    new_sub_times.append([cur_time, cur_time+ad_dur])
-                    cur_time += ad_dur
-                # 🔄 Step3: Find corresponding main DataFrame index and update new_sub_times
-                main_df_idx = tasks_df[tasks_df['number'] == row['number']].index[0]
-                tasks_df.at[main_df_idx, 'new_sub_times'] = new_sub_times
-                # 🎯 Step4: Choose emoji based on speed_factor and accept comparison
-                emoji = "⚡" if speed_factor <= accept else "⚠️"
-                rprint(f"[cyan]{emoji} Processed chunk {chunk_start} to {index} with speed factor {speed_factor}[/cyan]")
+        #if row['cut_off'] == 1:
+        chunk_df = tasks_df.iloc[chunk_start:index+1].reset_index(drop=True)
+        speed_factor, keep_gaps = process_chunk(chunk_df, accept, min_speed)
+        
+        # 🎯 Step1: Start processing new timeline
+        chunk_start_time = parse_df_srt_time(chunk_df.iloc[0]['start_time'])
+        chunk_end_time = parse_df_srt_time(chunk_df.iloc[-1]['end_time']) + chunk_df.iloc[-1]['tolerance'] # 加上tolerance才是这一块的结束
+        cur_time = chunk_start_time
+        for i, row in chunk_df.iterrows():
+            # If i is not 0, which is not the first row of the chunk, cur_time needs to be added with the gap of the previous row, remember to divide by speed_factor
+            if i != 0 and keep_gaps:
+                cur_time += chunk_df.iloc[i-1]['gap']/speed_factor
+            new_sub_times = []
+            number = row['number']
+            lines = eval(row['lines']) if isinstance(row['lines'], str) else row['lines']
+            for line_index, line in enumerate(lines):
+                # 🔄 Step2: Start speed change and save as OUTPUT_FILE_TEMPLATE
+                temp_file = TEMP_FILE_TEMPLATE.format(f"{number}_{line_index}")
+                output_file = OUTPUT_FILE_TEMPLATE.format(f"{number}_{line_index}")
+                adjust_audio_speed(temp_file, output_file, speed_factor)
+                ad_dur = get_audio_duration(output_file)
+                new_sub_times.append([cur_time, cur_time+ad_dur])
+                # new_sub_times.append([chunk_start_time, chunk_start_time+ad_dur])
+                cur_time += ad_dur
+            # 🔄 Step3: Find corresponding main DataFrame index and update new_sub_times
+            main_df_idx = tasks_df[tasks_df['number'] == row['number']].index[0]
+            tasks_df.at[main_df_idx, 'new_sub_times'] = new_sub_times
+            # 🎯 Step4: Choose emoji based on speed_factor and accept comparison
+            emoji = "⚡" if speed_factor <= accept else "⚠️"
+            rprint(f"[cyan]{emoji} Processed chunk {chunk_start} to {index} with speed factor {speed_factor}[/cyan]")
             # 🔄 Step5: Check if the last row exceeds the range
             if cur_time > chunk_end_time:
                 time_diff = cur_time - chunk_end_time
@@ -207,7 +208,7 @@ def merge_chunks(tasks_df: pd.DataFrame) -> pd.DataFrame:
                     tasks_df.at[index, 'new_sub_times'] = last_times
                 else:
                     raise Exception(f"Chunk {chunk_start} to {index} exceeds the chunk end time {chunk_end_time:.2f} seconds with current time {cur_time:.2f} seconds")
-            chunk_start = index+1
+        chunk_start = index+1
     
     rprint("[bold green]✅ Audio chunks processing completed![/bold green]")
     return tasks_df

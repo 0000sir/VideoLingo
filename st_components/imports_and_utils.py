@@ -10,6 +10,7 @@ from core import (
     step3_1_spacy_split,
     step3_2_splitbymeaning,
     step4_1_summarize,
+    step4_0_translate_directly,
     step4_2_translate_all,
     step5_splitforsub,
     
