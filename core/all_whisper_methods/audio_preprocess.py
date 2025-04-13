@@ -13,6 +13,7 @@ AUDIO_DIR = "output/audio"
 RAW_AUDIO_FILE = "output/audio/raw.mp3"
 CLEANED_CHUNKS_EXCEL_PATH = "output/log/cleaned_chunks.xlsx"
 TERMINOLOGY_JSON_PATH = 'output/log/terminology.json'
+SUMMARY_CACHE = 'output/log/summary.txt'
 
 def compress_audio(input_file: str, output_file: str):
     """将输入音频文件压缩为低质量音频文件，用于转录"""
@@ -172,11 +173,18 @@ def summarize(content: str):
     system = """
     Please extract the background information, main content points, names, and explanations of key terms from the user-provided dialogue or narrative.
     """
+    os.makedirs('output/log', exist_ok=True)
+    if os.path.exists(SUMMARY_CACHE):
+        return open(SUMMARY_CACHE).read()
+
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": content}
     ]
-    return ask_gpt(content, response_json=False, valid_def=None, log_title='summarize', system=system)
+    res = ask_gpt(content, response_json=False, valid_def=None, log_title='summarize', system=system)
+    with open(SUMMARY_CACHE, 'w', encoding='utf-8') as f:
+        f.write(res)
+    return res
 
 # 使用大模型总结全篇内容要点，并以此为背景校对语句（同时更新文字）
 # segments结构
@@ -210,8 +218,9 @@ def proofread_with_semantic(segments: list):
     texts = []
     for seg in segments:
         texts.append(seg['text'])
-    get_summary() # generate summary
-    summary = json.loads(open(TERMINOLOGY_JSON_PATH, 'r', encoding='utf-8').read())
+    # get_summary() # generate summary 有循环依赖问题
+    # summary = json.loads(open(TERMINOLOGY_JSON_PATH, 'r', encoding='utf-8').read())
+    summary = summarize("\n".join(texts))
 
     system = f"""用户将发给你一段视频配音文字的片段，格式为：
     [
